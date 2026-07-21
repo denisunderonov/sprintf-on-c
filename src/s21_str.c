@@ -1,5 +1,3 @@
-#include <stdio.h>
-
 #include "s21_string.h"
 
 #if defined(__APPLE__) || defined(__MACH__)
@@ -330,6 +328,28 @@ s21_size_t s21_strcspn(const char* str1, const char* str2) {
   return result;
 }
 
+static void s21_make_unknown_error(char* destination, int errnum) {
+  int result_length = 0;
+  int prefix_index = 0;
+  while (UNKNOWN_ERR[prefix_index] != '\0') {
+    destination[result_length++] = UNKNOWN_ERR[prefix_index++];
+  }
+  int negative = errnum < 0;
+  if (negative) destination[result_length++] = '-';
+  unsigned int magnitude =
+      negative ? 0U - (unsigned int)errnum : (unsigned int)errnum;
+  char reversed_digits[16];
+  int digit_count = 0;
+  do {
+    reversed_digits[digit_count++] = (char)('0' + magnitude % 10);
+    magnitude /= 10;
+  } while (magnitude > 0);
+  for (int i = digit_count - 1; i >= 0; i--) {
+    destination[result_length++] = reversed_digits[i];
+  }
+  destination[result_length] = '\0';
+}
+
 char* s21_strerror(int errnum) {
   static char error_buf[300];
   char* result = S21_NULL;
@@ -337,8 +357,7 @@ char* s21_strerror(int errnum) {
   if (errnum < ERR_COUNT && errnum >= 0) {
     result = (char*)ERRORS[errnum];
   } else {
-    // заменить sprintf на нашу функцию или использовать цикл
-    sprintf(error_buf, "%s%d", UNKNOWN_ERR, errnum);
+    s21_make_unknown_error(error_buf, errnum);
     result = error_buf;
   }
 
