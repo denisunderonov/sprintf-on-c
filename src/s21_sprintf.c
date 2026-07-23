@@ -3,22 +3,22 @@
 #include <stdlib.h>
 
 #include "s21_string.h"
-#define S21_BIG_BASE 1000000000U  // основание большого целого числа
-#define S21_FLOAT_MARGIN 400      // запас под цифры целой части double
+#define S21_BIG_BASE 1000000000U
+#define S21_FLOAT_MARGIN 400
 typedef struct {
-  int flag_minus;     // выравнивание по левому краю
-  int flag_plus;      // обязательный знак перед числом
-  int flag_space;     // пробел перед положительным числом
-  int width;          // минимальная ширина поля
-  int precision;      // заданная точность
-  int precision_set;  // признак наличия точки в формате
-  char length;        // модификатор h или l
-  char specifier;     // конечный тип преобразования
+  int flag_minus;
+  int flag_plus;
+  int flag_space;
+  int width;
+  int precision;
+  int precision_set;
+  char length;
+  char specifier;
 } s21_format;
 typedef struct {
-  unsigned int* blocks;  // блоки большого целого числа
-  int size;              // количество используемых блоков
-  int capacity;          // вместимость массива блоков
+  unsigned int* blocks;
+  int size;
+  int capacity;
 } s21_big_uint;
 static int s21_is_digit(char symbol);
 static void s21_parse_flags(const char* format, int* index,
@@ -52,26 +52,26 @@ static int s21_value_capacity(const s21_format* options);
 static void s21_process_format(char* str, int* result_length,
                                const s21_format* options, va_list* arguments);
 int s21_sprintf(char* str, const char* format, ...) {
-  va_list arguments;            // список аргументов после format
-  va_start(arguments, format);  // начало чтения переменных аргументов
-  int format_index = 0;         // текущая позиция в строке формата
-  int result_length = 0;        // текущая длина результата
+  va_list arguments;
+  va_start(arguments, format);
+  int format_index = 0;
+  int result_length = 0;
   while (format[format_index] != '\0') {
     if (format[format_index] != '%') {
       str[result_length++] = format[format_index++];
     } else {
-      s21_format options = s21_parse_format(format, &format_index);  // разбор %
+      s21_format options = s21_parse_format(format, &format_index);
       s21_process_format(str, &result_length, &options, &arguments);
     }
   }
-  str[result_length] = '\0';  // завершение результирующей строки
-  va_end(arguments);          // завершение чтения аргументов
+  str[result_length] = '\0';
+  va_end(arguments);
   return result_length;
 }
 static int s21_is_digit(char symbol) { return symbol >= '0' && symbol <= '9'; }
 static void s21_parse_flags(const char* format, int* index,
                             s21_format* options) {
-  int parsing_flags = 1;  // управление циклом чтения флагов
+  int parsing_flags = 1;
   while (parsing_flags) {
     if (format[*index] == '-') {
       options->flag_minus = 1;
@@ -96,33 +96,31 @@ static int s21_parse_number(const char* format, int* index) {
   return number;
 }
 static s21_format s21_parse_format(const char* format, int* format_index) {
-  s21_format options = {0};  // начальные значения всех параметров
-  (*format_index)++;         // пропуск символа процента
+  s21_format options = {0};
+  (*format_index)++;
   s21_parse_flags(format, format_index, &options);
-  options.width = s21_parse_number(format, format_index);  // ширина поля
+  options.width = s21_parse_number(format, format_index);
   if (format[*format_index] == '.') {
-    options.precision_set = 1;  // точность указана явно
+    options.precision_set = 1;
     (*format_index)++;
     options.precision = s21_parse_number(format, format_index);
   }
   if (format[*format_index] == 'h' || format[*format_index] == 'l') {
-    options.length = format[*format_index];  // сохранение размера типа
+    options.length = format[*format_index];
     (*format_index)++;
   }
-  options.specifier =
-      format[*format_index];  // сохранение c s d u f или процента
+  options.specifier = format[*format_index];
   if (format[*format_index] != '\0') {
     (*format_index)++;
   }
   return options;
 }
 static int s21_unsigned_to_string(unsigned long value, char* destination) {
-  char reversed_digits[32];  // цифры числа в обратном порядке
-  int digit_count = 0;       // количество полученных цифр
+  char reversed_digits[32];
+  int digit_count = 0;
   do {
-    reversed_digits[digit_count++] =
-        (char)('0' + value % 10);  // последняя цифра
-    value /= 10;                   // удаление цифры
+    reversed_digits[digit_count++] = (char)('0' + value % 10);
+    value /= 10;
   } while (value > 0);
   for (int i = 0; i < digit_count; i++) {
     destination[i] = reversed_digits[digit_count - i - 1];
@@ -223,7 +221,7 @@ static int s21_scaled_float_to_string(long double value, int precision,
 }
 static int s21_add_integer_sign(char* destination, int negative,
                                 const s21_format* options) {
-  int length = 0;  // количество записанных символов знака
+  int length = 0;
   if (negative) {
     destination[length++] = '-';
   } else if (options->flag_plus) {
@@ -235,16 +233,16 @@ static int s21_add_integer_sign(char* destination, int negative,
 }
 static int s21_make_signed(long value, const s21_format* options,
                            char* value_string) {
-  int negative = value < 0;  // признак отрицательного числа
+  int negative = value < 0;
   unsigned long magnitude =
-      negative ? 0UL - (unsigned long)value : (unsigned long)value;  // модуль
+      negative ? 0UL - (unsigned long)value : (unsigned long)value;
   char digits[32];
   int digit_count = s21_unsigned_to_string(magnitude, digits);
   if (options->precision_set && options->precision == 0 && magnitude == 0) {
     digit_count = 0;
   }
   int result_length = s21_add_integer_sign(value_string, negative, options);
-  int zero_count = options->precision - digit_count;  // ведущие нули точности
+  int zero_count = options->precision - digit_count;
   if (zero_count < 0) zero_count = 0;
   for (int i = 0; i < zero_count; i++) value_string[result_length++] = '0';
   for (int i = 0; i < digit_count; i++) {
@@ -260,7 +258,7 @@ static int s21_make_unsigned(unsigned long value, const s21_format* options,
   if (options->precision_set && options->precision == 0 && value == 0) {
     digit_count = 0;
   }
-  int zero_count = options->precision - digit_count;  // ведущие нули точности
+  int zero_count = options->precision - digit_count;
   if (zero_count < 0) zero_count = 0;
   int result_length = 0;
   for (int i = 0; i < zero_count; i++) value_string[result_length++] = '0';
@@ -273,7 +271,7 @@ static int s21_make_unsigned(unsigned long value, const s21_format* options,
 static int s21_make_float(long double value, const s21_format* options,
                           char* value_string) {
   int result_length = 0;
-  int negative = signbit(value) != 0;  // учитывает также отрицательный ноль
+  int negative = signbit(value) != 0;
   if (negative) value = -value;
   if (isnan(value)) {
 #if !defined(__APPLE__) && !defined(__MACH__)
@@ -289,8 +287,7 @@ static int s21_make_float(long double value, const s21_format* options,
       value_string[result_length++] = 'n';
       value_string[result_length++] = 'f';
     } else {
-      int precision =
-          options->precision_set ? options->precision : 6;  // по умолчанию 6
+      int precision = options->precision_set ? options->precision : 6;
       result_length +=
           s21_make_finite_float(value, precision, value_string + result_length);
     }
@@ -326,22 +323,22 @@ static int s21_make_finite_float(long double value, int precision,
 }
 static void s21_write_field(char* str, int* result_length, const char* value,
                             int value_length, const s21_format* options) {
-  int padding = options->width - value_length;  // количество пробелов поля
+  int padding = options->width - value_length;
   if (padding < 0) padding = 0;
   if (!options->flag_minus) {
-    for (int i = 0; i < padding; i++) str[(*result_length)++] = ' ';  // справа
+    for (int i = 0; i < padding; i++) str[(*result_length)++] = ' ';
   }
   for (int i = 0; i < value_length; i++) {
     str[(*result_length)++] = value[i];
   }
   if (options->flag_minus) {
-    for (int i = 0; i < padding; i++) str[(*result_length)++] = ' ';  // слева
+    for (int i = 0; i < padding; i++) str[(*result_length)++] = ' ';
   }
 }
 static void s21_process_format(char* str, int* result_length,
                                const s21_format* options, va_list* arguments) {
   if (options->specifier == 's') {
-    const char* value = va_arg(*arguments, const char*);  // строковый аргумент
+    const char* value = va_arg(*arguments, const char*);
     int length = s21_string_length(value, options);
     s21_write_field(str, result_length, value, length, options);
   } else {
